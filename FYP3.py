@@ -1,8 +1,10 @@
 
 import math
 import random
-import matplotlib.pyplot as plot
+import matplotlib.pyplot as plt
 import csv
+import matplotlib.animation as animation
+import numpy as np
 
 def Euler(x, f, h):
     return x+f(x)*h
@@ -24,7 +26,7 @@ def RK4(x,f,h):
 
 gravitational_constant = 6.67e-11
 n_steps = 1000000
-time_step = 100
+time_step = 1000
 planet_positions = []
 planets = []
 
@@ -82,32 +84,24 @@ def update_location(planets):
         target_body.y_pos = RK4(target_body.y_pos, lambda y: target_body.y_vel, time_step)
 
 
-def plot_output(planets, outfile=None):
-    fig = plot.figure()
-    colours = ['r', 'b', 'g', 'y', 'm', 'c']
-    ax = fig.add_subplot(1, 1, 1)
-    max_range = 0
+def plot(planets):
+    plt.figure("2d Plot")
+
     for current_body in planets:
-        #print(current_body)
-        max_dim = max(max(current_body["x"]), max(current_body["y"]))
-        if max_dim > max_range:
-            max_range = max_dim
-        ax.plot(current_body["x"], current_body["y"], c=random.choice(colours),
+        plt.plot(current_body["x"], current_body["y"],
                 label=current_body["name"])
 
-    ax.set_xlim([-max_range, max_range])
-    ax.set_ylim([-max_range, max_range])
-    ax.legend()
+    plt.legend()
+    plt.show()
 
-    plot.show()
 
 def run_step(planets):
     compute_velocity(planets)
     update_location(planets)
 
 
-if __name__ == "__main__":
-    with open('data.csv') as csv_file:
+def read_csv_file(x):
+    with open(x) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
 
         for row in csv_reader:
@@ -117,6 +111,10 @@ if __name__ == "__main__":
 
             planets.append(body(x_pos=float(temp[1]), y_pos=float(temp[2]), mass=float(temp[3]), x_vel=float(temp[4]),
                                 y_vel=float(temp[5]), name=temp[0]))
+
+
+if __name__ == "__main__":
+    read_csv_file('2.csv')
 
     for planet in planets:
         planet_positions.append({"x": [], "y": [], "name": planet.name})
@@ -130,4 +128,4 @@ if __name__ == "__main__":
             planet_number[1]["y"].append(planets[planet_number[0]].y_pos)
         i = i+1
 
-    plot_output(planet_positions)
+    plot(planet_positions)
