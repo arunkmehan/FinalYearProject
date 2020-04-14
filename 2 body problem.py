@@ -83,19 +83,8 @@ def compute_acc(planet1, planet2):
 
 def run_step(planet1, planet2):
 
-    # computes the x and y accleration
-    x_acc, y_acc = compute_acc(planet1, planet2)
-
-    # calculates the velocity by differentiating the acceleration
-    planet1.x_vel = rk4(planet1.x_vel, lambda x: x_acc, time_step)
-    planet1.y_vel = rk4(planet1.y_vel, lambda y: y_acc, time_step)
-
-    # calculates the displacement by differentiating the velocity
-    planet1.x_pos = rk4(planet1.x_pos, lambda x: planet1.x_vel, time_step)
-    planet1.y_pos = rk4(planet1.y_pos, lambda y: planet1.y_vel, time_step)
-
-    # planet1.x_pos = 1
-    # planet1.y_pos = 1
+    planet1.x_pos = 1
+    planet1.y_pos = 1
 
     # computes the x and y accleration
     x_acc, y_acc = compute_acc(planet2, planet1)
