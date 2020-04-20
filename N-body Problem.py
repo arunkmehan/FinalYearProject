@@ -23,6 +23,7 @@ planets = []
 tot_x = []
 tot_y = []
 total_energy = []
+intensity = []
 
 
 # defines the class of a planet
@@ -185,7 +186,6 @@ def run_step(planets):
             planet[1].x_pos += x_deriv * time_step
             planet[1].y_pos += y_deriv * time_step
 
-
     total_energy.append((kinetic_energy + potential_energy))
 
 
@@ -218,8 +218,9 @@ def plot(xpos, ypos, dim):
     plt.legend()
 
 
-def update(j):          # this is used for the animation and gets the points we need to plot in real time
-
+def update(j):
+    # this is used for the animation and gets the points we need to plot in real time
+    global tot_x, tot_y, intensity
     # gets the latest values
     new_x_values, new_y_values = get_new_values(j)
 
@@ -227,9 +228,18 @@ def update(j):          # this is used for the animation and gets the points we 
     tot_x.extend(new_x_values)
     tot_y.extend(new_y_values)
 
+    # removes previous items from the animation
+    if j > 20:
+        del tot_x[0:6]
+        del tot_y[0:6]
+
     # plots the animation
-    scatter.set_sizes([0.2, ])
-    scatter.set_offsets(np.c_[tot_x, tot_y])
+    scatter.set_sizes([5, ])
+    scatter.set_offsets(np.c_[new_x_values,  new_y_values])
+
+    if j < 20:
+        intensity = np.concatenate((np.array(intensity) * 0.9, np.ones(len(new_x_values))))
+    scatter.set_array(intensity)
 
 
 def get_new_values(j):
@@ -237,11 +247,14 @@ def get_new_values(j):
     new_y = []
     anim_speed = 10
 
-    for planet in zip(planet_x_positions, planet_y_positions):
+    for place, planet in enumerate(zip(planet_x_positions, planet_y_positions)):
 
         # gets the current values at position i * animation speed (otherwise too slow)
-        new_x.append(planet[0]["x"][j*anim_speed])
-        new_y.append(planet[1]["y"][j*anim_speed])
+        try:
+            new_x.append(planet[0]["x"][j*anim_speed])
+            new_y.append(planet[1]["y"][j*anim_speed])
+        except:
+            pass
 
     return new_x, new_y
 
@@ -268,7 +281,6 @@ if __name__ == "__main__":
 
     # execute each step one at a time
     while planets[-3].x_pos < 0 or i == 0:
-    #while i < 10000:
         run_step(planets)
 
         for place, planet in enumerate(planet_x_positions):
@@ -288,6 +300,7 @@ if __name__ == "__main__":
 
         i = i+1
 
+    # print the change in energy
     print("%-42s" % ((max(total_energy) - min(total_energy))/float(-1.9816601e+35)))
 
     # increases the dimension so the planet isn't at the border
@@ -306,9 +319,14 @@ if __name__ == "__main__":
     scatter = ax.scatter(x, y)
 
     # updates the animation in real time
-    ani = animation.FuncAnimation(fig, update, frames=100000, interval=1)
+    for planet_pos in zip(planet_x_positions, planet_y_positions):
+        ax.plot(planet_pos[0]["x"], planet_pos[1]["y"],
+                label=planet_pos[0]["name"], linewidth = '0.1')
+
+    ani = animation.FuncAnimation(fig, update, frames=10000, interval=1)
     plt.show()
 
+    # plots the graph to show energy
     plt.figure("graph for energy")
     plt.scatter(np.linspace(0, len(total_energy), len(total_energy)), total_energy)
     plt.show()
