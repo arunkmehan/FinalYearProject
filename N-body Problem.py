@@ -6,30 +6,12 @@ import matplotlib.animation as animation
 import numpy as np
 
 
-def euler(x, f, h):                 # defines how the euler method works
-    return x+f(x)*h
-
-
-def modified_euler(x, f, h):          # defines how the modified euler method works
-    k1 = h*f(x)
-    k2 = h*f(x+k1)
-    return x+0.5*(k1+k2)
-
-
-def rk4(x, f, h):                     # defines how the rk4 scheme works
-    k1 = h*f(x)
-    k2 = h*f(x + 0.5*k1)
-    k3 = h*f(x + 0.5*k2)
-    k4 = h*f(x + k3)
-    return x + (1/6)*(k1 + 2*k2 + 2*k3 + k4)
-
-
 # gravitational constant used to find acceleration
 gravitational_constant = 6.67e-11
 
 # Allows us to set the number of steps and the amount of each time step skips
 n_steps = 50000
-time_step = 5000
+time_step = 32000
 
 # check variable to keep keep the Sun central
 ch = True
@@ -63,9 +45,55 @@ def distance(x1, y1, x2, y2):
 
 
 # calculates the force on one body
+def calc_acc(acc, dis, mass, dist):
+    acc += (gravitational_constant * dis * mass) / dist ** 3
+    return acc
+
+# calculates the force on one body
 def calc_force(dis, mass, mass1, dist):
     force = (gravitational_constant * dis * mass * mass1) / dist ** 3
     return force
+
+
+# method to just return c and y acceleration used when using the different schemes
+def get_acc(planet, temp):
+    accx = 0
+    accy = 0
+    for other in enumerate(planets):
+        if planet.name == other[1].name:  # ensuring the planet is not using itself to accelerate
+            pass
+
+        elif planet.name == "Sun":
+            accx = 0
+            accy = 0
+
+        else:
+            dist = distance(temp[0], temp[1], other[1].x_pos, other[1].y_pos)
+
+            # calculates the change in x and y
+            x_displacement = other[1].x_pos - temp[0]
+            y_displacement = other[1].y_pos - temp[1]
+
+            accx = calc_acc(accx, x_displacement, other[1].mass, dist)
+            accy = calc_acc(accy, y_displacement, other[1].mass, dist)
+    return accx, accy
+
+
+# calculates the derivatives used when using the different schemes
+def derive(planet, k, time_step_1):
+    # creates a temporary array used to calculate new acceleration
+    temp = [0, 0, 0, 0]
+
+    # temp[0] = new xpos
+    temp[0] = planet.x_pos + k[0] * time_step_1
+    # temp[1] = new ypos
+    temp[1] = planet.y_pos + k[1] * time_step_1
+    # temp[2] = new xvel
+    temp[2] = planet.x_vel + k[2] * time_step_1
+    # temp[3] = new yvel
+    temp[3] = planet.y_vel + k[3] * time_step_1
+    ax, ay = get_acc(planet, temp)
+    return [temp[2], temp[3], ax, ay]
 
 
 # execute a step
@@ -116,28 +144,49 @@ def run_step(planets):
                     planet[1].x_acc = 0
                     planet[1].y_acc = 0
 
-                # calculates the potential energy
-                potential_energy = potential_energy + 2*(-gravitational_constant * planet[1].mass * other.mass) / dist
-
             j += 1
 
-        # calculates the velocity by differentiating the acceleration
-        planet[1].x_vel = rk4(planet[1].x_vel, lambda x: planet[1].x_acc, time_step)
-        planet[1].y_vel = rk4(planet[1].y_vel, lambda y: planet[1].y_acc, time_step)
 
-        # calculates the displacement by differentiating the velocity
-        planet[1].x_pos = rk4(planet[1].x_pos, lambda x: planet[1].x_vel, time_step)
-        planet[1].y_pos = rk4(planet[1].y_pos, lambda y: planet[1].y_vel, time_step)
-
-        velocity_squared = planet[1].x_vel ** 2 + planet[1].y_vel ** 2
-        kinetic_energy = kinetic_energy + 0.5 * planet[1].mass * velocity_squared
 
         global ch
-        if planet[0] == 0 and ch:
+        if planet[1].name == "Sun" and ch:
             planet[1].x_pos = 1
             ch = False
 
-    total_energy.append(kinetic_energy + potential_energy)
+        else:
+
+            velocity_squared = planet[1].x_vel ** 2 + planet[1].y_vel ** 2
+            kinetic_energy = kinetic_energy + 0.5 * planet[1].mass * velocity_squared
+
+            for other in planets:
+                if planet[1] == other:
+                    pass
+                elif planet[1].name == "Sun":
+                    pass
+                else:
+                    dist = distance(planet[1].x_pos, planet[1].y_pos, other.x_pos, other.y_pos)
+                    potential_energy = potential_energy + (-gravitational_constant * planet[1].mass * other.mass) / dist
+
+            # calculates the values for each k
+            k1 = [planet[1].x_vel, planet[1].y_vel, planet[1].x_acc, planet[1].y_acc]
+            k2 = derive(planet[1], k1, time_step * 0.5)
+            k3 = derive(planet[1], k2, time_step * 0.5)
+            k4 = derive(planet[1], k3, time_step)
+
+            # calculates dx/dt, dy/dt, dvx/dt, and dvy/dt
+            x_deriv = 1.0 / 6.0 * (k1[0] + 2.0 * k2[0] + 2.0 * k3[0] + k4[0])
+            y_deriv = 1.0 / 6.0 * (k1[1] + 2.0 * k2[1] + 2.0 * k3[1] + k4[1])
+            x_vel_deriv = 1.0 / 6.0 * (k1[2] + 2.0 * (k2[2] + k3[2]) + k4[2])
+            y_vel_deriv = 1.0 / 6.0 * (k1[3] + 2.0 * (k2[3] + k3[3]) + k4[3])
+
+            # adds it to the previous values multiplying by the time step
+            planet[1].x_vel += x_vel_deriv * time_step
+            planet[1].y_vel += y_vel_deriv * time_step
+            planet[1].x_pos += x_deriv * time_step
+            planet[1].y_pos += y_deriv * time_step
+
+
+    total_energy.append((kinetic_energy + potential_energy))
 
 
 def read_csv_file(file):                                # reads the csv file
@@ -219,7 +268,7 @@ if __name__ == "__main__":
 
     # execute each step one at a time
     while planets[-3].x_pos < 0 or i == 0:
-
+    #while i < 10000:
         run_step(planets)
 
         for place, planet in enumerate(planet_x_positions):
@@ -239,7 +288,7 @@ if __name__ == "__main__":
 
         i = i+1
 
-    print(max(total_energy) - min(total_energy))
+    print("%-42s" % ((max(total_energy) - min(total_energy))/float(-1.9816601e+35)))
 
     # increases the dimension so the planet isn't at the border
     dimension = dimension + dimension * 0.1
