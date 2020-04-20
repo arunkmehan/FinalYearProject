@@ -4,24 +4,6 @@ import matplotlib.pyplot as plt
 import csv
 
 
-def euler(x, f, h):                 # defines how the euler method works
-    return x+f(x)*h
-
-
-def modified_euler(x, f, h):          # defines how the modified euler method works
-    k1 = h*f(x)
-    k2 = h*f(x+k1)
-    return x+0.5*(k1+k2)
-
-
-def rk4(x, f, h):                     # defines how the rk4 scheme works
-    k1 = h*f(x)
-    k2 = h*f(x + 0.5*k1)
-    k3 = h*f(x + 0.5*k2)
-    k4 = h*f(x + k3)
-    return x + (1/6)*(k1 + 2*k2 + 2*k3 + k4)
-
-
 # gravitational constant used to calculate acceleration
 gravitational_constant = 6.67e-11
 
@@ -90,12 +72,11 @@ def run_step(planet1, planet2):
     x_acc, y_acc = compute_acc(planet2, planet1)
 
     # calculates the velocity by differentiating the acceleration
-    planet2.x_vel = rk4(planet2.x_vel, lambda x: x_acc, time_step)
-    planet2.y_vel = rk4(planet2.y_vel, lambda y: y_acc, time_step)
+    planet2.x_pos += planet2.x_vel * time_step
+    planet2.y_pos += planet2.y_vel * time_step
+    planet2.x_vel += x_acc * time_step
+    planet2.y_vel += y_acc * time_step
 
-    # calculates the displacement by differentiating the velocity
-    planet2.x_pos = rk4(planet2.x_pos, lambda x: planet2.x_vel, time_step)
-    planet2.y_pos = rk4(planet2.y_pos, lambda y: planet2.y_vel, time_step)
 
 
 def read_csv_file(x):               # reads the csv file
@@ -123,8 +104,6 @@ def plot(xpos, ypos, dim):
     for planet_pos in zip(xpos, ypos):
         plt.plot(planet_pos[0]["x"], planet_pos[1]["y"],
                  label=planet_pos[0]["name"], color='k')
-
-    # plt.legend()
 
 
 if __name__ == "__main__":
