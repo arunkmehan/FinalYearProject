@@ -22,7 +22,6 @@ tot_x = []
 tot_y = []
 total_energy = []
 events = []
-events_orig = []
 intensity = []
 
 
@@ -47,16 +46,7 @@ class Planet:
         self.grow = None
         self.explored = False
         self.time_step = 0
-
-
-# defines a class for an event
-class Event:
-    def __init__(self, planet, time_step):
-        self.planet = planet
-        self.time_step = time_step
-
-    def get_planet(self):
-        return self.planet
+        self.grown_larger = False
 
 
 # calculates the distance between two points in 2d space
@@ -147,9 +137,8 @@ def derive(planet, derivative, time_step_1):
 
 def run_step(event):
 
-    planet = event.planet
-    time_step = event.time_step
-    planet.time_step = event.time_step
+    planet = event
+    time_step = planet.time_step
 
     # computes the x and y accleration
     x_acc, y_acc, k_energy, p_energy = compute_acc(planet)
@@ -179,7 +168,7 @@ def run_step(event):
         planet.y_pos += y_deriv * time_step
 
     planet.vel = planet.x_vel + planet.y_vel
-    planet.total_energy = planet.total_energy + (p_energy + k_energy)
+    planet.total_energy = planet.total_energy + (p_energy + k_energy) #* planet.time_step
 
 
 def read_csv_file(file):               # reads the csv file
@@ -196,18 +185,9 @@ def read_csv_file(file):               # reads the csv file
                                   y_vel=float(temp[5]), name=temp[0]))
 
 
-def read_events_file(file):               # reads the events csv file
-    with open(file) as csv_file:
-        csv_reader = csv.reader(csv_file, delimiter=',')
-
-        for row in csv_reader:
-            temp = []
-            for y in row:
-                temp.append(y)
-
-            for planet in planets:
-                if planet.name == temp[0]:
-                    events_orig.append(Event(planet=planet, time_step=float(temp[1])))
+def initiate_planets(x):
+    for planet in planets:
+        planet.time_step = x
 
 
 def plot(xpos, ypos, dimension):
@@ -270,7 +250,7 @@ def num_Of_planets(name):
     k = 0
 
     for event in events:
-        if event.planet.name == name:
+        if event.name == name:
             k += 1
     return k
 
@@ -279,7 +259,8 @@ if __name__ == "__main__":
 
     # get data from csv file
     read_csv_file('data3.csv')
-    read_events_file('events.csv')
+    initiate_planets(500)
+
 
     # create the arrays storing the x and y positions
     for planet in planets:
@@ -292,22 +273,24 @@ if __name__ == "__main__":
     prev_max = 0
     prev_min = 1000000
 
+    # set the event list and the current maximum time step
+    events = planets.copy()
+    max_timestep = events[-1].time_step
+
     # starts timer to measure execution time of program
     start_time = time.time()
 
-    # set the event list and the current maximum time step
-    events = events_orig
-    max_timestep = events[0].time_step
-
     # loops through steps
     while planets[-3].x_pos < 0 or i == 0:
-
+    #while i< 1000:
         # loops through events
         for event in events:
 
             # execute each step one at a time
             run_step(event)
 
+        t=0
+        while t < len(planets):
             # store the x position
             for place, planet in enumerate(planet_x_positions):
                 planet["x"].append(planets[place].x_pos)
@@ -323,16 +306,16 @@ if __name__ == "__main__":
                 #  to find maximum dimension
                 if planets[place].y_pos>dimension:
                     dimension = planets[place].y_pos
-
+            t+=1
         # calculates the energy of the system at each iteration
-        if i > 1000:
+        if i > 0:
             for e in planets:
                 n = num_Of_planets(e.name)
                 x = e.total_energy
-                energy = energy + x * (max_timestep/e.time_step)
+                energy = energy + x
                 e.total_energy = 0
 
-            if i == 1001:
+            if i == 1:
                 pass
             else:
                 total_energy.append(energy)
@@ -340,11 +323,13 @@ if __name__ == "__main__":
         energy = 0
         grown = False
 
+
         # the adaptive time step
         if i % 100 == 0:
             print(i)
         if i % 100 == 0 and i != 0 and i < 1000:
             grown = False
+            increase = False
 
             # iterates through the planets
             iterate_planets = iter(planets)
@@ -358,47 +343,64 @@ if __name__ == "__main__":
                     planet.instances = planet.instances *2
 
                 # checks to see if the change in velocity is small enough to warrant increasing the time step
-                if planet.shrink is not True and (planet.vel / planet.prev_vel) > 0.99992 and \
-                        abs(planet.vel / planet.prev_vel) < 1.00001:
-                    max_timestep = max_timestep * 2
+                if planet.shrink is not True and (planet.vel / planet.prev_vel) > 0.999 and \
+                        abs(planet.vel / planet.prev_vel) < 1.001:
+                    #print("EXPAND" + planet.name)
+                    if planet.time_step == max_timestep:
+                        grown = True
+                        planet.grown_larger = True
+                        #print(planet.name)
+                    else:
+                        planet.instances = planet.instances / 2
+                        #print("HUGH" + planet.name)
+                        #print(planet.time_step, max_timestep)
                     planet.grow = True
-                    grown = True
                     planet.explored = True
 
             for plan in planets:
-                if grown and plan.grow is not True:
+                if grown and plan.grown_larger is not True:
                     plan.instances = plan.instances * 2
-                else:
-                    plan.grow = False
 
-        events.clear()
-        count = 0
+                elif plan.grown_larger is True:
+                    plan.grown_larger = False
+                    increase = True
+                plan.grow = False
 
-        # ensures the largest time step only has one event
-        for body in planets:
-            if planets[-1].instances > 1:
-                body.instances = body.instances / 2
+            if increase:
+                max_timestep = max_timestep * 2
 
-        for body in planets:
-            # ensures Sun has the largest time step
-            if body.name == "Sun":
-                body.instances = planets[-1].instances
-            # updates the list
-            while count < body.instances:
-                events.append(Event(body, max_timestep/ body.instances))
-                count += 1
+            events.clear()
             count = 0
+            # ensures the largest time step only has one event
+            '''for body in planets:
+                if planets[-1].instances > 1:
+                    body.instances = body.instances / 2'''
+
+            for body in planets:
+                # ensures Sun has the largest time step
+                if body.name == "Sun":
+                    body.instances = planets[-1].instances
+                # updates the list
+                while count < body.instances:
+                    body.time_step = max_timestep / body.instances
+                    events.append(body)
+                    count += 1
+                count = 0
 
         i += 1
 
+    end_time = time.time()
+
     # prints the time step for each planet
     for e in events:
-        print(e.planet.name, e.time_step)
+        print(e.name, e.time_step)
 
     # prints the relevant information
-    end_time = time.time()
     print(end_time - start_time)
-    print((max(total_energy[0:-1]) - min(total_energy[0:-1])) / -1.9816601e+35)
+    print((max(total_energy) - min(total_energy)) / -1.9816601e+35)
+
+    print(max_timestep)
+    print(planets[-2].instances)
 
     # increases the dimension so the planet isnt at the border
     dimension = dimension + dimension * 0.1
@@ -421,7 +423,7 @@ if __name__ == "__main__":
                 label=planet_pos[0]["name"], linewidth = '0.1')
 
     ani = animation.FuncAnimation(fig, update, frames=10000, interval=1)
-    plt.show()
+    plt.show()        
 
     # prints the graph for energy
     plt.figure("graph for energy")
