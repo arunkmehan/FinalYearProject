@@ -78,8 +78,8 @@ def run_step(planet1, planet2):
     planet2.y_vel += y_acc * time_step
 
 
-
-def read_csv_file(x):               # reads the csv file
+# reads the csv file
+def read_csv_file(x):
     with open(x) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
 

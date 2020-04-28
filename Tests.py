@@ -362,9 +362,9 @@ if __name__ == "__main__":
     # prints graph for energy
     plt.figure("graph for energy")
     plt.title("Energy change for Each Time Step with Extended Euler's Method", size=12)
-    plt.scatter(string_steps, all_energy[0], label = "Euler's Method")
-    plt.scatter(string_steps, all_energy[1], label = "Modified Euler's Method")
-    plt.scatter(string_steps, all_energy[2], label = "RK4 Scheme")
+    plt.scatter(string_steps, all_energy[0], label="Euler's Method")
+    plt.scatter(string_steps, all_energy[1], label="Modified Euler's Method")
+    plt.scatter(string_steps, all_energy[2], label="RK4 Scheme")
     plt.xlabel('Time Step', size=12)
     plt.ylabel('Range in energy', size=12)
     plt.legend()

@@ -168,7 +168,6 @@ def run_step(planets):
                     dist = distance(planet[1].x_pos, planet[1].y_pos, other.x_pos, other.y_pos)
                     potential_energy = potential_energy + (-gravitational_constant * planet[1].mass * other.mass) / dist
 
-
             # calculates the values for each k
             k1 = [planet[1].x_vel, planet[1].y_vel, planet[1].x_acc, planet[1].y_acc]
             k2 = derive(planet[1], k1, time_step * 0.5)
@@ -301,7 +300,7 @@ if __name__ == "__main__":
     # updates the animation in real time
     for planet_pos in zip(planet_x_positions, planet_y_positions):
         ax.plot(planet_pos[0]["x"], planet_pos[1]["y"],
-                label=planet_pos[0]["name"], linewidth = '0.1')
+                label=planet_pos[0]["name"], linewidth='0.1')
 
     ani = animation.FuncAnimation(fig, update, frames=10000, interval=1)
     plt.show()
