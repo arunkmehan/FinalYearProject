@@ -126,7 +126,7 @@ if __name__ == "__main__":
     i = 0
 
     # execute each step one at a time
-    while i < 500000:
+    while i < 250000:
         run_step(planets[0], planets[1])
 
         # store the x position

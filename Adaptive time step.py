@@ -69,6 +69,7 @@ def get_acc(planet, temp):
         if planet.name == other[1].name:  # ensuring the planet isnt using itself to accelerate
             pass
 
+        # keeps the Sun central
         elif planet.name == "Sun":
             accx = 0
             accy = 0
@@ -80,6 +81,7 @@ def get_acc(planet, temp):
             x_displacement = other[1].x_pos - temp[0]
             y_displacement = other[1].y_pos - temp[1]
 
+            # calculates the acceleration
             accx = calc_acc(accx, x_displacement, other[1].mass, dist)
             accy = calc_acc(accy, y_displacement, other[1].mass, dist)
     return accx, accy
@@ -126,13 +128,21 @@ def compute_acc(planet):
 
 # calculates the derivatives used when using the different schemes
 def derive(planet, derivative, time_step_1):
-    temp = [0, 0, 0, 0]  # temp is just a temporary instance
-    temp[0] = planet.x_pos + derivative[0] * time_step_1
-    temp[1] = planet.y_pos + derivative[1] * time_step_1
-    temp[2] = planet.x_vel + derivative[2] * time_step_1
-    temp[3] = planet.y_vel + derivative[3] * time_step_1
-    ax, ay = get_acc(planet, temp)
-    return [temp[2], temp[3], ax, ay]
+    # intermediate will be overwritten
+    intermediate = [0, 0, 0, 0]
+
+    intermediate[0] = planet.x_pos + derivative[0] * time_step_1
+    intermediate[1] = planet.y_pos + derivative[1] * time_step_1
+    intermediate[2] = planet.x_vel + derivative[2] * time_step_1
+    intermediate[3] = planet.y_vel + derivative[3] * time_step_1
+
+    x_acc, y_acc = get_acc(planet, intermediate)
+
+    return [intermediate[2], intermediate[3], x_acc, y_acc]
+
+
+def calc_rk4(k1,k2,k3,k4, time_step):
+    return 1 / 6 * (k1 + 2 * k2 + 2 * k3 + k4) * time_step
 
 
 def run_step(event):
@@ -155,23 +165,18 @@ def run_step(event):
         k3 = derive(planet, k2, time_step * 0.5)
         k4 = derive(planet, k3, time_step)
 
-        # calculates dx/dt, dy/dt, dvx/dt, and dvy/dt
-        x_deriv = 1.0 / 6.0 * (k1[0] + 2.0 * k2[0] + 2.0 * k3[0] + k4[0])
-        y_deriv = 1.0 / 6.0 * (k1[1] + 2.0 * k2[1] + 2.0 * k3[1] + k4[1])
-        x_vel_deriv = 1.0 / 6.0 * (k1[2] + 2.0 * (k2[2] + k3[2]) + k4[2])
-        y_vel_deriv = 1.0 / 6.0 * (k1[3] + 2.0 * (k2[3] + k3[3]) + k4[3])
-
         # adds it to the previous values multiplying by the time step
-        planet.x_vel += x_vel_deriv * time_step
-        planet.y_vel += y_vel_deriv * time_step
-        planet.x_pos += x_deriv * time_step
-        planet.y_pos += y_deriv * time_step
+        planet.x_pos += calc_rk4(k1[0], k2[0], k3[0], k4[0], time_step)
+        planet.y_pos += calc_rk4(k1[1], k2[1], k3[1], k4[1], time_step)
+        planet.x_vel += calc_rk4(k1[2], k2[2], k3[2], k4[2], time_step)
+        planet.y_vel += calc_rk4(k1[3], k2[3], k3[3], k4[3], time_step)
 
     planet.vel = planet.x_vel + planet.y_vel
-    planet.total_energy = planet.total_energy + (p_energy + k_energy) #* planet.time_step
+    planet.total_energy = planet.total_energy + (p_energy + k_energy)
 
 
-def read_csv_file(file):               # reads the csv file
+# reads the csv file
+def read_csv_file(file):
     with open(file) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
 
@@ -185,11 +190,13 @@ def read_csv_file(file):               # reads the csv file
                                   y_vel=float(temp[5]), name=temp[0]))
 
 
+# gives each planet an intitial time step
 def initiate_planets(x):
     for planet in planets:
         planet.time_step = x
 
 
+# plots the graph
 def plot(xpos, ypos, dimension):
     # creates figure
     plt.figure("2d Plot")
@@ -200,45 +207,33 @@ def plot(xpos, ypos, dimension):
     # plots the points stored in two arrays
     for planet_pos in zip(xpos, ypos):
         plt.plot(planet_pos[0]["x"], planet_pos[1]["y"],
-                 label=planet_pos[0]["name"])
+                 label=planet_pos[0]["name"], linewidth = '0.9')
 
     plt.legend()
 
 
 # this is used for the animation and gets the points we need to plot in real time
 def update(j):
-    global tot_x, tot_y, intensity
     # gets the latest values
     new_x_values, new_y_values = get_new_values(j)
 
-    # adds the latest to the array with every value before it
-    tot_x.extend(new_x_values)
-    tot_y.extend(new_y_values)
-
-    # removes previous items from the animation
-    if j > 20:
-        del tot_x[0:6]
-        del tot_y[0:6]
-
     # plots the animation
+    scatter.set_color(["purple"])
     scatter.set_sizes([5, ])
-    scatter.set_offsets(np.c_[new_x_values,  new_y_values])
-    if j < 20:
-        intensity = np.concatenate((np.array(intensity) * 0.9, np.ones(len(new_x_values))))
-    scatter.set_array(intensity)
+    scatter.set_offsets(np.c_[new_x_values, new_y_values])
 
 
 def get_new_values(j):
     new_x = []
     new_y = []
-    anim_speed = 100
+    anim_speed = 20
 
     for place, planet in enumerate(zip(planet_x_positions, planet_y_positions)):
 
         # gets the current values at position i * animation speed (otherwise too slow)
         try:
-            new_x.append(planet[0]["x"][j*anim_speed])
-            new_y.append(planet[1]["y"][j*anim_speed])
+            new_x.append(planet[0]["x"][10000+j*anim_speed])
+            new_y.append(planet[1]["y"][10000+j*anim_speed])
         except:
             pass
 
@@ -259,8 +254,7 @@ if __name__ == "__main__":
 
     # get data from csv file
     read_csv_file('data3.csv')
-    initiate_planets(500)
-
+    initiate_planets(25000)
 
     # create the arrays storing the x and y positions
     for planet in planets:
@@ -273,6 +267,22 @@ if __name__ == "__main__":
     prev_max = 0
     prev_min = 1000000
 
+    for p in planets:
+        for place, planet in enumerate(planet_x_positions):
+            planet["x"].append(planets[place].x_pos)
+
+            # to find maximum dimension
+            if planets[place].x_pos > dimension:
+                dimension = planets[place].x_pos
+
+        # store the y position
+        for place, planet in enumerate(planet_y_positions):
+            planet["y"].append(planets[place].y_pos)
+
+            #  to find maximum dimension
+            if planets[place].y_pos > dimension:
+                dimension = planets[place].y_pos
+
     # set the event list and the current maximum time step
     events = planets.copy()
     max_timestep = events[-1].time_step
@@ -282,7 +292,7 @@ if __name__ == "__main__":
 
     # loops through steps
     while planets[-3].x_pos < 0 or i == 0:
-    #while i< 1000:
+
         # loops through events
         for event in events:
 
@@ -290,6 +300,7 @@ if __name__ == "__main__":
             run_step(event)
 
         t=0
+        # loops through planet to store positions
         while t < len(planets):
             # store the x position
             for place, planet in enumerate(planet_x_positions):
@@ -307,6 +318,7 @@ if __name__ == "__main__":
                 if planets[place].y_pos>dimension:
                     dimension = planets[place].y_pos
             t+=1
+
         # calculates the energy of the system at each iteration
         if i > 0:
             for e in planets:
@@ -324,7 +336,7 @@ if __name__ == "__main__":
         grown = False
 
 
-        # the adaptive time step
+        #### the adaptive time step ####
         if i % 100 == 0:
             print(i)
         if i % 100 == 0 and i != 0 and i < 1000:
@@ -336,27 +348,28 @@ if __name__ == "__main__":
             next(iterate_planets)
 
             for num, planet in enumerate(iterate_planets):
+
                 # checks to see if the change in velocity is large enough to warrant reducing the time step
-                if planet.grow is not True and abs(planet.vel/planet.prev_vel) < 0.99 or abs(planet.vel/planet.prev_vel)\
-                        > 1.01 and planet.explored is not True:
+                if planet.grow is not True and abs(planet.vel/planet.prev_vel) < 0.9 or abs(planet.vel/planet.prev_vel)\
+                        > 1.1 and planet.explored is not True:
                     planet.shrink = True
                     planet.instances = planet.instances *2
 
                 # checks to see if the change in velocity is small enough to warrant increasing the time step
-                if planet.shrink is not True and (planet.vel / planet.prev_vel) > 0.999 and \
-                        abs(planet.vel / planet.prev_vel) < 1.001:
-                    #print("EXPAND" + planet.name)
+                if planet.shrink is not True and (planet.vel / planet.prev_vel) > 0.99 and \
+                        abs(planet.vel / planet.prev_vel) < 1.01:
+
+                    # does the max time step need increasing
                     if planet.time_step == max_timestep:
                         grown = True
                         planet.grown_larger = True
-                        #print(planet.name)
+
                     else:
                         planet.instances = planet.instances / 2
-                        #print("HUGH" + planet.name)
-                        #print(planet.time_step, max_timestep)
                     planet.grow = True
                     planet.explored = True
 
+            # updates the amount of instances
             for plan in planets:
                 if grown and plan.grown_larger is not True:
                     plan.instances = plan.instances * 2
@@ -371,11 +384,8 @@ if __name__ == "__main__":
 
             events.clear()
             count = 0
-            # ensures the largest time step only has one event
-            '''for body in planets:
-                if planets[-1].instances > 1:
-                    body.instances = body.instances / 2'''
 
+            # dynamically updates the list
             for body in planets:
                 # ensures Sun has the largest time step
                 if body.name == "Sun":

@@ -3,6 +3,7 @@ import math
 import matplotlib.pyplot as plt
 import csv
 import time
+import numpy as np
 
 # gravitational constant used to find acceleration
 gravitational_constant = 6.67e-11
@@ -23,7 +24,8 @@ test_energy = []
 ch = False
 times = []
 
-steps = [500, 1000, 5000, 10000, 25000, 50000, 75000, 100000, 500000, 1000000]
+#steps = [500, 1000, 5000, 10000, 25000, 50000, 75000, 100000]
+steps = [25000]
 
 
 # defines the class of a planet
@@ -108,21 +110,18 @@ def compute_acc(planet):
 
 
 # calculates the derivatives used when using the different schemes
-def derive(planet, k, time_step_1):
-    # creates a temporary array used to calculate new acceleration
-    temp = [0, 0, 0, 0]
+def derive(planet, derivative, time_step_1):
+    intermediate = [0, 0, 0, 0]  # intermediate will be overwritten
+    intermediate[0] = planet.x_pos + derivative[0] * time_step_1
+    intermediate[1] = planet.y_pos + derivative[1] * time_step_1
+    intermediate[2] = planet.x_vel + derivative[2] * time_step_1
+    intermediate[3] = planet.y_vel + derivative[3] * time_step_1
+    x_acc_1, y_acc_1 = get_acc(planet, intermediate)
+    return [intermediate[2], intermediate[3], x_acc_1, y_acc_1]
 
-    # temp[0] = new xpos
-    temp[0] = planet.x_pos + k[0] * time_step_1
-    # temp[1] = new ypos
-    temp[1] = planet.y_pos + k[1] * time_step_1
-    # temp[2] = new xvel
-    temp[2] = planet.x_vel + k[2] * time_step_1
-    # temp[3] = new yvel
-    temp[3] = planet.y_vel + k[3] * time_step_1
-    ax, ay = get_acc(planet, temp)
-    return [temp[2], temp[3], ax, ay]
 
+def calc_rk4(k1,k2,k3,k4, time_step):
+    return 1 / 6 * (k1 + 2 * k2 + 2 * k3 + k4) * time_step
 
 def run_step_rk4(planets):
     kinetic_energy = 0
@@ -138,34 +137,42 @@ def run_step_rk4(planets):
             planet[1].x_pos = 1
             ch = False
 
-        else:
+        elif planet[0] != 0:
             # calculates the values for each k
             k1 = [planet[1].x_vel, planet[1].y_vel, x_acc, y_acc]
             k2 = derive(planet[1], k1, time_step * 0.5)
             k3 = derive(planet[1], k2, time_step * 0.5)
             k4 = derive(planet[1], k3, time_step)
 
-            # calculates dx/dt, dy/dt, dvx/dt, and dvy/dt
-            x_deriv = 1.0 / 6.0 * (k1[0] + 2.0 * k2[0] + 2.0 * k3[0] + k4[0])
-            y_deriv = 1.0 / 6.0 * (k1[1] + 2.0 * k2[1] + 2.0 * k3[1] + k4[1])
-            x_vel_deriv = 1.0 / 6.0 * (k1[2] + 2.0 * (k2[2] + k3[2]) + k4[2])
-            y_vel_deriv = 1.0 / 6.0 * (k1[3] + 2.0 * (k2[3] + k3[3]) + k4[3])
-
             # adds it to the previous values multiplying by the time step
-            planet[1].x_vel += x_vel_deriv * time_step
-            planet[1].y_vel += y_vel_deriv * time_step
-            planet[1].x_pos += x_deriv * time_step
-            planet[1].y_pos += y_deriv * time_step
-
-        # sums the kinetic and potential energy
-        kinetic_energy = kinetic_energy + kinetic
-        potential_energy = potential_energy + potential
+            planet[1].x_pos += calc_rk4(k1[0], k2[0], k3[0], k4[0], time_step)
+            planet[1].y_pos += calc_rk4(k1[1], k2[1], k3[1], k4[1], time_step)
+            planet[1].x_vel += calc_rk4(k1[2], k2[2], k3[2], k4[2], time_step)
+            planet[1].y_vel += calc_rk4(k1[3], k2[3], k3[3], k4[3], time_step)
+            # sums the kinetic and potential energy
+            kinetic_energy = kinetic_energy + kinetic
+            potential_energy = potential_energy + potential
 
     # appends the total energy to the array
     total_energy.append((kinetic_energy + potential_energy))
 
 
-def run_step_mod(planets):
+# gets accseleration 1 step in advance and returns the new accelerations and velocities
+def derive_mod(planet, derivative, time_step_1):
+    # intermediate will be overwritten
+    intermediate = [0, 0, 0, 0]
+
+    intermediate[0] = derivative[0] * time_step_1
+    intermediate[1] = derivative[1] * time_step_1
+    intermediate[2] = derivative[2] * time_step_1
+    intermediate[3] = derivative[3] * time_step_1
+
+    x_acc_1, y_acc_1 = get_acc(planet, intermediate)
+    return [intermediate[2], intermediate[3], x_acc_1, y_acc_1]
+
+
+# run a step of the euler-cromer method
+def run_step_cromer(planets):
     kinetic_energy = 0
     potential_energy = 0
 
@@ -174,7 +181,7 @@ def run_step_mod(planets):
         # computes the x and y accleration
         x_acc, y_acc, potential, kinetic = compute_acc(planet)
 
-
+        # keeps the sun central
         global ch
         if planet[0] == 0 and ch:
             planet[1].x_pos = 1
@@ -192,6 +199,7 @@ def run_step_mod(planets):
     total_energy.append((kinetic_energy + potential_energy))
 
 
+# run a step of eulers method
 def run_step_euler(planets):
     kinetic_energy = 0
     potential_energy = 0
@@ -220,7 +228,8 @@ def run_step_euler(planets):
     total_energy.append((kinetic_energy + potential_energy))
 
 
-def read_csv_file(x):               # reads the csv file
+# reads the csv file
+def read_csv_file(x):
     with open(x) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
 
@@ -234,7 +243,7 @@ def read_csv_file(x):               # reads the csv file
                                 y_vel=float(temp[5]), name=temp[0]))
 
 
-
+# plots the graph
 def plot(xpos, ypos, dimension):
     # creates figure
     plt.figure("2d Plot")
@@ -252,9 +261,9 @@ def plot(xpos, ypos, dimension):
 
 if __name__ == "__main__":
 
-    #sets the schemes for comparison
+    # sets the schemes for comparison
     scheme = 0
-    schemes = [[run_step_euler, "EULER"], [run_step_mod, "MODIFIED EULER"], [run_step_rk4, "RK4"]]
+    schemes = [[run_step_euler, "EULER"], [run_step_cromer, "EULER CROMER"], [run_step_rk4, "RK4"]]
     all_energy = []
     all_times = []
 
@@ -291,13 +300,11 @@ if __name__ == "__main__":
             beg_energy = None
 
             start_time = time.time()
-            plz = True
-            negative = False
+            negative = True
 
             # execute program
             while planets[-3].x_pos<0 or i==0:
                 schemes[scheme][0](planets)
-
 
                 # store the x position
                 for place, planet in enumerate(planet_x_positions):
@@ -323,13 +330,15 @@ if __name__ == "__main__":
             print("%-17s %10.1f %-3s %4.1000g %-3s %-17s" %(schemes[scheme][1], t_step , "   " , test_energy[-1], "    ", time_taken))
             total_energy.clear()
 
+        # goes to the next scheme and appends the values
         scheme = scheme + 1
         all_times.append(times)
         all_energy.append(test_energy)
 
+        # clears the temporary lists
         times = []
         test_energy = []
-        
+
     # increases the dimension so the planet isnt at the border
     dimension = dimension + dimension * 0.1
     plot(planet_x_positions, planet_y_positions, dimension)
@@ -342,9 +351,9 @@ if __name__ == "__main__":
     # prints graph for time
     plt.figure("graph for time")
     plt.title("Time Taken for Each Time Step with Modified Euler's Method", size=12)
-    plt.plot(string_steps, all_times[0], label="Euler's Method")
-    plt.plot(string_steps, all_times[1], label="Modified Euler's Method")
-    plt.plot(string_steps, all_times[2], label="RK4 Scheme")
+    plt.plot(string_steps, all_times[0], label="Euler's Method", marker='x')
+    plt.plot(string_steps, all_times[1], '--', label="Modified Euler's Method", marker='x')
+    plt.plot(string_steps, all_times[2], label="RK4 Scheme", marker='x')
     plt.xlabel('Time Step', size=12)
     plt.ylabel('Time Taken (seconds)', size=12)
     plt.legend()

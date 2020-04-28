@@ -61,9 +61,12 @@ def get_acc(planet, temp):
     accx = 0
     accy = 0
     for other in enumerate(planets):
-        if planet.name == other[1].name:  # ensuring the planet is not using itself to accelerate
+
+        # ensuring the planet is not using itself to accelerate
+        if planet.name == other[1].name:
             pass
 
+        # keeps the Sun central
         elif planet.name == "Sun":
             accx = 0
             accy = 0
@@ -81,20 +84,19 @@ def get_acc(planet, temp):
 
 
 # calculates the derivatives used when using the different schemes
-def derive(planet, k, time_step_1):
-    # creates a temporary array used to calculate new acceleration
-    temp = [0, 0, 0, 0]
+def derive(planet, derivative, time_step_1):
+    intermediate = [0, 0, 0, 0]  # intermediate will be overwritten
+    intermediate[0] = planet.x_pos + derivative[0] * time_step_1
+    intermediate[1] = planet.y_pos + derivative[1] * time_step_1
+    intermediate[2] = planet.x_vel + derivative[2] * time_step_1
+    intermediate[3] = planet.y_vel + derivative[3] * time_step_1
+    x_acc, y_acc = get_acc(planet, intermediate)
+    return [intermediate[2], intermediate[3], x_acc, y_acc]
 
-    # temp[0] = new xpos
-    temp[0] = planet.x_pos + k[0] * time_step_1
-    # temp[1] = new ypos
-    temp[1] = planet.y_pos + k[1] * time_step_1
-    # temp[2] = new xvel
-    temp[2] = planet.x_vel + k[2] * time_step_1
-    # temp[3] = new yvel
-    temp[3] = planet.y_vel + k[3] * time_step_1
-    ax, ay = get_acc(planet, temp)
-    return [temp[2], temp[3], ax, ay]
+
+# averages out the rk4 scheme
+def calc_rk4(k1,k2,k3,k4, time_step):
+    return 1 / 6 * (k1 + 2 * k2 + 2 * k3 + k4) * time_step
 
 
 # execute a step
@@ -147,15 +149,13 @@ def run_step(planets):
 
             j += 1
 
-
-
+        # calculates the total energy at each iteration
         global ch
         if planet[1].name == "Sun" and ch:
             planet[1].x_pos = 1
             ch = False
 
         else:
-
             velocity_squared = planet[1].x_vel ** 2 + planet[1].y_vel ** 2
             kinetic_energy = kinetic_energy + 0.5 * planet[1].mass * velocity_squared
 
@@ -168,24 +168,18 @@ def run_step(planets):
                     dist = distance(planet[1].x_pos, planet[1].y_pos, other.x_pos, other.y_pos)
                     potential_energy = potential_energy + (-gravitational_constant * planet[1].mass * other.mass) / dist
 
+
             # calculates the values for each k
             k1 = [planet[1].x_vel, planet[1].y_vel, planet[1].x_acc, planet[1].y_acc]
             k2 = derive(planet[1], k1, time_step * 0.5)
             k3 = derive(planet[1], k2, time_step * 0.5)
             k4 = derive(planet[1], k3, time_step)
 
-            # calculates dx/dt, dy/dt, dvx/dt, and dvy/dt
-            x_deriv = 1.0 / 6.0 * (k1[0] + 2.0 * k2[0] + 2.0 * k3[0] + k4[0])
-            y_deriv = 1.0 / 6.0 * (k1[1] + 2.0 * k2[1] + 2.0 * k3[1] + k4[1])
-            x_vel_deriv = 1.0 / 6.0 * (k1[2] + 2.0 * (k2[2] + k3[2]) + k4[2])
-            y_vel_deriv = 1.0 / 6.0 * (k1[3] + 2.0 * (k2[3] + k3[3]) + k4[3])
-
             # adds it to the previous values multiplying by the time step
-            planet[1].x_vel += x_vel_deriv * time_step
-            planet[1].y_vel += y_vel_deriv * time_step
-            planet[1].x_pos += x_deriv * time_step
-            planet[1].y_pos += y_deriv * time_step
-
+            planet[1].x_pos += calc_rk4(k1[0], k2[0], k3[0], k4[0], time_step)
+            planet[1].y_pos += calc_rk4(k1[1], k2[1], k3[1], k4[1], time_step)
+            planet[1].x_vel += calc_rk4(k1[2], k2[2], k3[2], k4[2], time_step)
+            planet[1].y_vel += calc_rk4(k1[3], k2[3], k3[3], k4[3], time_step)
     total_energy.append((kinetic_energy + potential_energy))
 
 
@@ -219,27 +213,13 @@ def plot(xpos, ypos, dim):
 
 
 def update(j):
-    # this is used for the animation and gets the points we need to plot in real time
-    global tot_x, tot_y, intensity
     # gets the latest values
     new_x_values, new_y_values = get_new_values(j)
 
-    # adds the latest to the array with every value before it
-    tot_x.extend(new_x_values)
-    tot_y.extend(new_y_values)
-
-    # removes previous items from the animation
-    if j > 20:
-        del tot_x[0:6]
-        del tot_y[0:6]
-
     # plots the animation
+    scatter.set_color(["purple"])
     scatter.set_sizes([5, ])
-    scatter.set_offsets(np.c_[new_x_values,  new_y_values])
-
-    if j < 20:
-        intensity = np.concatenate((np.array(intensity) * 0.9, np.ones(len(new_x_values))))
-    scatter.set_array(intensity)
+    scatter.set_offsets(np.c_[new_x_values, new_y_values])
 
 
 def get_new_values(j):
