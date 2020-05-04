@@ -253,7 +253,7 @@ def num_Of_planets(name):
 if __name__ == "__main__":
 
     # get data from csv file
-    read_csv_file('data3.csv')
+    read_csv_file('SolarSystemData.csv')
     initiate_planets(25000)
 
     # create the arrays storing the x and y positions
@@ -286,12 +286,13 @@ if __name__ == "__main__":
     # set the event list and the current maximum time step
     events = planets.copy()
     max_timestep = events[-1].time_step
+    seconds = 0
 
     # starts timer to measure execution time of program
     start_time = time.time()
 
     # loops through steps
-    while planets[-3].x_pos < 0 or i == 0:
+    while (seconds)/31556952 <=12 or i == 0:
 
         # loops through events
         for event in events:
@@ -334,11 +335,9 @@ if __name__ == "__main__":
 
         energy = 0
         grown = False
-
+        seconds = seconds + max_timestep
 
         #### the adaptive time step ####
-        if i % 100 == 0:
-            print(i)
         if i % 100 == 0 and i != 0 and i < 1000:
             grown = False
             increase = False
@@ -350,15 +349,14 @@ if __name__ == "__main__":
             for num, planet in enumerate(iterate_planets):
 
                 # checks to see if the change in velocity is large enough to warrant reducing the time step
-                if planet.grow is not True and abs(planet.vel/planet.prev_vel) < 0.9 or abs(planet.vel/planet.prev_vel)\
-                        > 1.1 and planet.explored is not True:
+                if planet.grow is not True and abs(planet.vel/planet.prev_vel) < 0.92 or abs(planet.vel/planet.prev_vel)\
+                        > 1.08 and planet.explored is not True:
                     planet.shrink = True
                     planet.instances = planet.instances *2
 
                 # checks to see if the change in velocity is small enough to warrant increasing the time step
-                if planet.shrink is not True and (planet.vel / planet.prev_vel) > 0.99 and \
-                        abs(planet.vel / planet.prev_vel) < 1.01:
-
+                if planet.shrink is not True and (planet.vel / planet.prev_vel) > 0.99999 and \
+                        abs(planet.vel / planet.prev_vel) < 1.000001:
                     # does the max time step need increasing
                     if planet.time_step == max_timestep:
                         grown = True
@@ -406,11 +404,8 @@ if __name__ == "__main__":
         print(e.name, e.time_step)
 
     # prints the relevant information
-    print(end_time - start_time)
-    print((max(total_energy) - min(total_energy)) / -1.9816601e+35)
-
-    print(max_timestep)
-    print(planets[-2].instances)
+    print("Time Taken = ", end_time - start_time)
+    print("Percentage change in Energy = ", ((max(total_energy) - min(total_energy))*100)/ -1.9816601e+35)
 
     # increases the dimension so the planet isnt at the border
     dimension = dimension + dimension * 0.1

@@ -11,7 +11,7 @@ gravitational_constant = 6.67e-11
 
 # Allows us to set the number of steps and the amount of each time step skips
 n_steps = 50000
-time_step = 32000
+time_step = 86400
 
 # check variable to keep keep the Sun central
 ch = True
@@ -241,7 +241,7 @@ def get_new_values(j):
 if __name__ == "__main__":
 
     # get data from csv file
-    read_csv_file('data3.csv')
+    read_csv_file('SolarSystemData.csv')
 
     # create the arrays storing the x and y positions
     for planet in planets:
@@ -260,6 +260,7 @@ if __name__ == "__main__":
 
     # execute each step one at a time
     while planets[-3].x_pos < 0 or i == 0:
+
         run_step(planets)
 
         for place, planet in enumerate(planet_x_positions):
@@ -278,9 +279,6 @@ if __name__ == "__main__":
                 dimension = planets[place].y_pos
 
         i = i+1
-
-    # print the change in energy
-    print("%-42s" % ((max(total_energy) - min(total_energy))/float(-1.9816601e+35)))
 
     # increases the dimension so the planet isn't at the border
     dimension = dimension + dimension * 0.1

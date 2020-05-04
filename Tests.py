@@ -25,7 +25,7 @@ ch = False
 times = []
 
 #steps = [500, 1000, 5000, 10000, 25000, 50000, 75000, 100000]
-steps = [25000]
+steps = [20000,40000,60000,80000]
 
 
 # defines the class of a planet
@@ -268,7 +268,7 @@ if __name__ == "__main__":
     all_times = []
 
     # headers for table printed
-    print("%-17s %-9s %-3s %-17s %-42s %-17s" % (
+    print("%-19s %-9s %-3s %-17s %-1s %-10s" % (
           "SCHEME", "time step", "   ", "energy", "    ", "time"))
 
     # loops through schemes
@@ -281,7 +281,7 @@ if __name__ == "__main__":
             planet_x_positions.clear()
             planet_y_positions.clear()
 
-            read_csv_file('data3.csv')
+            read_csv_file('SolarSystemData.csv')
 
             time_step = t_step
 
@@ -303,7 +303,7 @@ if __name__ == "__main__":
             negative = True
 
             # execute program
-            while planets[-3].x_pos<0 or i==0:
+            while ((i)*time_step)/31556952 <=12 or i==0:
                 schemes[scheme][0](planets)
 
                 # store the x position
@@ -327,7 +327,7 @@ if __name__ == "__main__":
             times.append(time_taken)
 
             test_energy.append((max(total_energy) - min(total_energy)) / float(-1.9816601e+35))
-            print("%-17s %10.1f %-3s %4.1000g %-3s %-17s" %(schemes[scheme][1], t_step , "   " , test_energy[-1], "    ", time_taken))
+            print("%-17s %10.1f %-3s %4.15f %-3s %4.2f" %(schemes[scheme][1], t_step , "   " , test_energy[-1]*100, "    ", time_taken))
             total_energy.clear()
 
         # goes to the next scheme and appends the values
@@ -350,10 +350,19 @@ if __name__ == "__main__":
 
     # prints graph for time
     plt.figure("graph for time")
-    plt.title("Time Taken for Each Time Step with Modified Euler's Method", size=12)
+    plt.title("Time Taken for Each Time Step", size=12)
     plt.plot(string_steps, all_times[0], label="Euler's Method", marker='x')
-    plt.plot(string_steps, all_times[1], '--', label="Modified Euler's Method", marker='x')
+    plt.plot(string_steps, all_times[1], '--', label="Euler-Cromer Method", marker='x')
     plt.plot(string_steps, all_times[2], label="RK4 Scheme", marker='x')
+    plt.xlabel('Time Step', size=12)
+    plt.ylabel('Time Taken (seconds)', size=12)
+    plt.legend()
+    plt.show()
+
+    # prints graph for rk4 scheme
+    plt.figure("graph for time")
+    plt.title("Time Taken for Each Time Step", size=12)
+    plt.bar(string_steps, all_times[2], label="RK4 Scheme")
     plt.xlabel('Time Step', size=12)
     plt.ylabel('Time Taken (seconds)', size=12)
     plt.legend()
@@ -361,9 +370,9 @@ if __name__ == "__main__":
 
     # prints graph for energy
     plt.figure("graph for energy")
-    plt.title("Energy change for Each Time Step with Extended Euler's Method", size=12)
+    plt.title("Energy change for Each Time Step", size=12)
     plt.scatter(string_steps, all_energy[0], label="Euler's Method")
-    plt.scatter(string_steps, all_energy[1], label="Modified Euler's Method")
+    plt.scatter(string_steps, all_energy[1], label="Euler-Cromer Method")
     plt.scatter(string_steps, all_energy[2], label="RK4 Scheme")
     plt.xlabel('Time Step', size=12)
     plt.ylabel('Range in energy', size=12)
