@@ -9,7 +9,7 @@ import time
 # gravitational constant used to find acceleration
 gravitational_constant = 6.67e-11
 
-# Allows us to set the number of steps and the amount of each time step skips
+# Allows us to set the number of steps and the amount of each time step advances
 n_steps = 5000
 energy = 0
 ch = True
