@@ -20,10 +20,7 @@ ch = True
 planet_x_positions = []
 planet_y_positions = []
 planets = []
-tot_x = []
-tot_y = []
 total_energy = []
-intensity = []
 
 
 # defines the class of a planet
