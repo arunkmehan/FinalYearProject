@@ -18,11 +18,8 @@ ch = True
 planet_x_positions = []
 planet_y_positions = []
 planets = []
-tot_x = []
-tot_y = []
 total_energy = []
 events = []
-intensity = []
 
 
 # defines the class of a planet
@@ -38,8 +35,6 @@ class Planet:
         self.prev_vel = 1
         self.k_energy = 0
         self.p_energy = 0
-        self.tot_k = 0
-        self.tot_p = 0
         self.total_energy = 0
         self.instances = 1
         self.shrink = None
