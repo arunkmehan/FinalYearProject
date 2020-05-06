@@ -18,4 +18,4 @@ N-BODY PROBLEM
 The N-body solution functions and a reasonable time step for the example of the Solar System is around 12,000.
 
 ADAPTIVE TIME STEP
-An adaptive time step was created in order to reduce accuracy and increase efficency. The parameters for this can be canged dependiong on your needs. For reasonable values of the Solar System the decreasing time step parameters should be around 0.99 and 1.01 and the increasing parameters should be around 0.9999 and 1.0001. This should allow for reasonable time steps to be achieved.
+An adaptive time step was created in order to reduce accuracy and increase efficency. The parameters for this can be canged dependiong on your needs. For reasonable values of the Solar System the decreasing time step parameters should be around 0.92 and 1.08 and the increasing parameters should be around 0.99999 and 1.00001. This should allow for reasonable time steps to be achieved.
