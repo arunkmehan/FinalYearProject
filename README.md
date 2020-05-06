@@ -1,4 +1,4 @@
-# FinalYearProject
+# Simulating The Solar System
 
 As decsribed in the report to go alongside this software, the scripts in this repository aim to solve the N-body problem.
 
